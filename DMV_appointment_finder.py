@@ -11,16 +11,6 @@ cookies = {"ASP.NET_SessionId": "g3u4ju2ervnb1vci4z5buxgb"}
 location_ids = {}
 appointments = []
 
-location_page = requests.get(
-        "https://skiptheline.ncdot.gov/Webapp/_/_/_/en/WizardAppt/Units?input=Appointment%20Type%20Id")
-scraper = BeautifulSoup(location_page.content, "html.parser")
-location_elems = scraper.find_all("div", class_="nc-unitbutton")  # two locations per box
-id_elems = scraper.find_all(id="unitId")
-distance_elems = scraper.find_all("span", class_="label")
-
-locations = [location_elems[i].text.replace("\r\n", " ") for i in range(0, len(location_elems), 2)]
-ids = [elem.get("value") for elem in id_elems]
-distances = [float(elem.text) for elem in distance_elems]
 
 class Date:
     def __init__(self, month, day, year=2020):
@@ -121,10 +111,23 @@ def insert_appointment(date, time, location):
 
 if __name__ == '__main__':
     # configs
-    start_date = Date(7, 15, 2020)
+    start_date = Date(7, 11, 2020)
     end_date = Date(7, 30, 2020)
-    max_distance = None
+    max_distance = 80
+    # using distance filter requires url from after fitting "sort by distance"
+    url1 = "https://skiptheline.ncdot.gov/Webapp/_/_/_/en/WizardAppt/Units?input=Appointment%20Type%20Id"
+    url = "https://skiptheline.ncdot.gov/Webapp/_/_/_/en/WizardAppt/UseLocation?lat=35.9563264&lng=-78.9413888&input=&visibleGoogleMaps=False"
     # _--------------------------
+
+    location_page = requests.get(url)
+    scraper = BeautifulSoup(location_page.content, "html.parser")
+    location_elems = scraper.find_all("div", class_="nc-unitbutton")  # two locations per box
+    id_elems = scraper.find_all(id="unitId")
+    distance_elems = scraper.find_all("span", class_="label")
+
+    locations = [location_elems[i].text.replace("\r\n", " ") for i in range(0, len(location_elems), 2)]
+    ids = [elem.get("value") for elem in id_elems]
+    distances = [float(elem.text.lower().replace("miles", '')) for elem in distance_elems]
     for location, id, dis in zip(locations, ids, distances):
         if max_distance is None or dis < max_distance:
             location_ids[location] = id
