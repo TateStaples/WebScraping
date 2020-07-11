@@ -11,19 +11,19 @@ cookies = {"ASP.NET_SessionId": "g3u4ju2ervnb1vci4z5buxgb"}
 location_ids = {}
 appointments = []
 
-location_page = requests.get("https://skiptheline.ncdot.gov/Webapp/_/_/_/en/WizardAppt/Units?input=Appointment%20Type%20Id")
+location_page = requests.get(
+        "https://skiptheline.ncdot.gov/Webapp/_/_/_/en/WizardAppt/Units?input=Appointment%20Type%20Id")
 scraper = BeautifulSoup(location_page.content, "html.parser")
 location_elems = scraper.find_all("div", class_="nc-unitbutton")  # two locations per box
 id_elems = scraper.find_all(id="unitId")
+distance_elems = scraper.find_all("span", class_="label")
 
 locations = [location_elems[i].text.replace("\r\n", " ") for i in range(0, len(location_elems), 2)]
 ids = [elem.get("value") for elem in id_elems]
-for location, id in zip(locations, ids):
-    location_ids[location] = id
-
+distances = [float(elem.text) for elem in distance_elems]
 
 class Date:
-    def __init__(self, day, month=8, year=2020):
+    def __init__(self, month, day, year=2020):
         self.day = day
         self.month = month
         self.year = year
@@ -52,7 +52,7 @@ class Date:
         if day > month_length:
             month = self.month + day // month_length
             day = day % month_length
-        return Date(day, month, self.year)
+        return Date(month, day, self.year)
 
     def __repr__(self):
         return self.to_string(self.month) + "/" + self.to_string(self.day) + "/" + str(self.year)
@@ -120,8 +120,16 @@ def insert_appointment(date, time, location):
 
 
 if __name__ == '__main__':
+    # configs
+    start_date = Date(7, 15, 2020)
+    end_date = Date(7, 30, 2020)
+    max_distance = None
+    # _--------------------------
+    for location, id, dis in zip(locations, ids, distances):
+        if max_distance is None or dis < max_distance:
+            location_ids[location] = id
     '''
-    d = Date(15, 7)
+    d = Date(7, 15)
     print(d)
     requests.get("https://skiptheline.ncdot.gov/Webapp/_/_/_/en/WizardAppt/SelectedUnit",
                  params={"unitId": location_ids["2210 Carthage Street, Sanford, NC 27330"]})
@@ -135,9 +143,6 @@ if __name__ == '__main__':
             insert_appointment(d, time, locations[0])
     print(appointments)
     '''
-    max_days = 12
-    start_date = Date(15, 7, 2020)
-    end_date = start_date + max_days
     print(start_date, end_date)
     last_location = None
     try:
